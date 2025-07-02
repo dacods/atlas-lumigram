@@ -9,10 +9,29 @@ import {
   Alert,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import storage from '@/lib/storage';
+import firestore from '@/lib/firestore';
+import { useAuth } from '@/components/AuthProvider';
 
 export default function Tab() {
+  const auth = useAuth();
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [caption, setCaption] = useState('');
+
+  async function save() {
+    if (!imageUri) return;
+    const save = imageUri?.split('/').pop() as string;
+    const {downloadURL, metadata} = await storage.upload(imageUri, save)
+    console.log(downloadURL);
+
+    firestore.addPost({
+      caption,
+      image: downloadURL,
+      createdAt: new Date(),
+      CreatedBy: auth.user?.uid!!,
+    });
+    alert('Post Added!');
+  }
 
   const pickImage = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -64,7 +83,7 @@ export default function Tab() {
         placeholderTextColor="#999"
       />
 
-      <Pressable onPress={handleSave} style={styles.saveButton}>
+      <Pressable onPress={save} style={styles.saveButton}>
         <Text style={styles.saveButtonText}>Save</Text>
       </Pressable>
 
