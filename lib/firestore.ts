@@ -1,5 +1,5 @@
 import { db } from "@/firebaseConfig";
-import { collection, getDocs, query, orderBy, limit, startAfter, addDoc, DocumentData, QueryDocumentSnapshot, } from "firebase/firestore";
+import { collection, getDocs, doc, setDoc, query, orderBy, limit, startAfter, addDoc, DocumentData, QueryDocumentSnapshot, } from "firebase/firestore";
 
 type Post = {
     caption: string;
@@ -38,8 +38,14 @@ async function getPosts(lastDoc: QueryDocumentSnapshot<DocumentData> | null = nu
   };
 }
 
+async function addToFavorites(userId: string, postId: string, postData: any) {
+  const userFavoritesRef = doc(db, "users", userId, "favorites", postId);
+  await setDoc(userFavoritesRef, postData);
+}
+
 
 export default {
     addPost,
-    getPosts
+    getPosts,
+    addToFavorites,
 }

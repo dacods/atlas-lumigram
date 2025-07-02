@@ -6,12 +6,14 @@ import { FlashList } from '@shopify/flash-list';
 import { TapGestureHandler, LongPressGestureHandler, State } from 'react-native-gesture-handler';
 import firestore from '@/lib/firestore';
 import { QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
+import { useAuth } from '@/components/AuthProvider';
 
 
 
 const { width } = Dimensions.get('window');
 
 export default function Tab() {
+  const auth = useAuth();
   const [posts, setPosts] = useState<any[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -46,8 +48,24 @@ const loadMore = async () => {
     setShowCaptions(prev => ({ ...prev, [item.id]: true }));
   };
 
-  const handleDoubleTap = (item: any) => {
-    Alert.alert('Double tapped!', `Image ID: ${item.id}`);
+  const handleDoubleTap = async (item: any) => {
+    if (!auth.user) {
+      Alert.alert("Error", "You must be logged in to add favorites.");
+      return;
+    }
+
+    try {
+      await firestore.addToFavorites(auth.user.uid, item.id, {
+        image: item.image,
+        caption: item.caption,
+        createdAt: item.createdAt,
+      });
+
+      Alert.alert('Added to favorites!');
+    } catch (error) {
+      console.error("Error adding to favorites:", error);
+      Alert.alert("Error", "Could not add to favorites.");
+    }
   };
 
   return (
