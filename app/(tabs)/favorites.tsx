@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   Alert,
   StyleSheet,
   Dimensions,
+  RefreshControl,
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import {
@@ -13,25 +14,59 @@ import {
   LongPressGestureHandler,
   State,
 } from 'react-native-gesture-handler';
-import { favoritesFeed } from '../../placeholder';
+import { useAuth } from "@/components/AuthProvider";
+import firestore from "@/lib/firestore";
+import { QueryDocumentSnapshot, DocumentData } from "firebase/firestore";
 
 const { width } = Dimensions.get('window');
 
 export default function Tab() {
+  const auth = useAuth();
+  const [posts, setPosts] = useState<any[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [lastDoc, setLastDoc] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
   const [showCaptions, setShowCaptions] = useState<{ [key: string]: boolean }>({});
+
+  const loadFavorites = useCallback(async () => {
+    if (!auth.user) return;
+
+    setRefreshing(true);
+    const { posts: newPosts, lastDoc: newLastDoc } = await firestore.getUserFavorites(auth.user.uid);
+    setPosts(newPosts);
+    setLastDoc(newLastDoc);
+    setRefreshing(false);
+  }, [auth.user]);
+
+  const loadMore = async () => {
+    if (!auth.user || loadingMore || !lastDoc) return;
+
+    setLoadingMore(true);
+    const { posts: morePosts, lastDoc: newLastDoc } = await firestore.getUserFavorites(auth.user.uid, lastDoc);
+    setPosts((prev) => [...prev, ...morePosts]);
+    setLastDoc(newLastDoc);
+    setLoadingMore(false);
+  };
+
+  useEffect(() => {
+    loadFavorites();
+  }, [auth.user]);
 
   const handleLongPress = (item: any) => {
     setShowCaptions((prev) => ({ ...prev, [item.id]: true }));
   };
 
   const handleDoubleTap = (item: any) => {
-    Alert.alert('Double tapped!', `Image ID: ${item.id}`);
+    Alert.alert("Double tapped!", `Image ID: ${item.id}`);
   };
 
   return (
     <FlashList
-      data={favoritesFeed}
+      data={posts}
       estimatedItemSize={400}
+      onEndReached={loadMore}
+      onEndReachedThreshold={1}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={loadFavorites} />}
       contentContainerStyle={{ paddingTop: 16, paddingBottom: 100 }}
       renderItem={({ item }) => (
         <LongPressGestureHandler
@@ -42,10 +77,7 @@ export default function Tab() {
           }}
           minDurationMs={500}
         >
-          <TapGestureHandler
-            numberOfTaps={2}
-            onActivated={() => handleDoubleTap(item)}
-          >
+          <TapGestureHandler numberOfTaps={2} onActivated={() => handleDoubleTap(item)}>
             <View style={styles.card}>
               <Image source={{ uri: item.image }} style={styles.image} />
               {showCaptions[item.id] && (
@@ -61,6 +93,7 @@ export default function Tab() {
     />
   );
 }
+
 
 const styles = StyleSheet.create({
   card: {

@@ -20,24 +20,24 @@ export default function Tab() {
   const [showCaptions, setShowCaptions] = useState<{ [key: string]: boolean }>({});
   const [lastDoc, setLastDoc] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
 
- const loadPosts = useCallback(async () => {
-  setRefreshing(true);
-  const { posts: newPosts, lastDoc: newLastDoc } = await firestore.getPosts();
-  console.log("Initial load:", newPosts.map(p => p.id));
-  setPosts(newPosts);
-  setLastDoc(newLastDoc);
-  setRefreshing(false);
-}, []);
+  const loadPosts = useCallback(async () => {
+    setRefreshing(true);
+    const { posts: newPosts, lastDoc: newLastDoc } = await firestore.getPosts();
+    console.log("Initial load:", newPosts.map(p => p.id));
+    setPosts(newPosts);
+    setLastDoc(newLastDoc);
+    setRefreshing(false);
+  }, []);
 
-const loadMore = async () => {
-  if (loadingMore || !lastDoc) return;
-  setLoadingMore(true);
-  const { posts: morePosts, lastDoc: newLastDoc } = await firestore.getPosts(lastDoc);
-  console.log("Pagination load:", morePosts.map(p => p.id));
-  setPosts(prev => [...prev, ...morePosts]);
-  setLastDoc(newLastDoc);
-  setLoadingMore(false);
-};
+  const loadMore = async () => {
+    if (loadingMore || !lastDoc) return;
+    setLoadingMore(true);
+    const { posts: morePosts, lastDoc: newLastDoc } = await firestore.getPosts(lastDoc);
+    console.log("Pagination load:", morePosts.map(p => p.id));
+    setPosts(prev => [...prev, ...morePosts]);
+    setLastDoc(newLastDoc);
+    setLoadingMore(false);
+  };
 
 
   useEffect(() => {

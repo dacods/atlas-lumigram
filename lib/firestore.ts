@@ -43,9 +43,32 @@ async function addToFavorites(userId: string, postId: string, postData: any) {
   await setDoc(userFavoritesRef, postData);
 }
 
+async function getUserFavorites(
+  userId: string,
+  lastDoc: QueryDocumentSnapshot<DocumentData> | null = null
+) {
+  const baseQuery = query(
+    collection(db, "users", userId, "favorites"),
+    orderBy("createdAt", "desc"),
+    ...(lastDoc ? [startAfter(lastDoc)] : []),
+    limit(PAGE_SIZE)
+  );
+
+  const snapshot = await getDocs(baseQuery);
+
+  const posts = snapshot.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
+  }));
+
+  const newLastDoc = snapshot.docs[snapshot.docs.length - 1] || null;
+
+  return { posts, lastDoc: newLastDoc };
+}
 
 export default {
     addPost,
     getPosts,
     addToFavorites,
+    getUserFavorites,
 }
